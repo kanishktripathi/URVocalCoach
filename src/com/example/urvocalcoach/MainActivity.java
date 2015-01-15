@@ -1,0 +1,243 @@
+package com.example.urvocalcoach;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Vibrator;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.example.urvocalcoach.Tuning.MusicNote;
+
+
+// TODO: Auto-generated Javadoc
+/**
+ * The Class MainActivity.
+ */
+public class MainActivity extends Activity {
+	
+	/** The ui controller. */
+	private UiControllerMain uiController;
+	
+	/** The analyzer. */
+	private AudioAnalyzer analyzer;
+	
+	/** The user freq. */
+	private TextView userFreq;
+	
+	/** The user note img. */
+	private ImageView userNoteImg;
+	
+	/** The target freq. */
+	private TextView targetFreq;
+	
+	/** The user note. */
+	private TextView userNote;
+	
+	/** The vibrator. */
+	private Vibrator vibrator;
+	
+	/** The note selector. */
+	private Spinner noteSelector;
+	
+	/** The volume bar. */
+	private SeekBar volumeBar;
+	
+    /* (non-Javadoc)
+     * @see android.app.Activity#onCreate(android.os.Bundle)
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        try {
+        	analyzer = new  AudioAnalyzer();
+        	uiController = new UiControllerMain(this);
+			userFreq = (TextView)findViewById(R.id.user_note_freq);
+			userNoteImg = (ImageView)findViewById(R.id.user_note);
+			userNote = (TextView)findViewById(R.id.user_note_letter);
+			noteSelector = (Spinner)findViewById(R.id.spinner_targetNote);
+			volumeBar = (SeekBar)findViewById(R.id.user_volume_level);
+			analyzer.addObserver(uiController);
+			String defaultNote = this.getResources().getString(R.string.default_note);
+			Button button = (Button)findViewById(R.id.target_note_sing);
+			button.setOnClickListener(uiController);
+			button.setOnTouchListener(uiController);
+			this.displayFeedBack(false);
+			vibrator = (Vibrator) getApplicationContext().getSystemService(VIBRATOR_SERVICE);
+			ArrayAdapter<CharSequence> arrayAdapter = ArrayAdapter.createFromResource(this, R.array.spinner_targetNotes, 
+					R.layout.spinner_layout);
+			noteSelector.setAdapter(arrayAdapter);
+			noteSelector.setOnItemSelectedListener(uiController);
+			noteSelector.setSelection(Tuning.getNoteByName(defaultNote).getIndex());
+			targetFreq = (TextView)findViewById(R.id.target_note_freq);
+		} catch (Exception e) {
+			Toast.makeText(this, "The are problems with your microphone :(" + e, Toast.LENGTH_LONG ).show();
+		}
+    }
+
+
+    /* (non-Javadoc)
+     * @see android.app.Activity#onCreateOptionsMenu(android.view.Menu)
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    /* (non-Javadoc)
+     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }   
+    
+    /**
+     * Update user note.
+     *
+     * @param note the note
+     * @param tactileFeed the tactile feed
+     * @param position the position
+     * @param volume the volume
+     */
+    public void updateUserNote(MusicNote note, boolean tactileFeed, int position, int volume) {
+    	userFreq.setText(Double.toString(note.getFrequency()));
+    	userNote.setText(note.getNote());
+    	position = position * 25;
+    	userFreq.setTranslationY(position);
+    	userNote.setTranslationY(position);
+    	userNoteImg.setTranslationY(position);
+    	if(volume < volumeBar.getMax()) {
+    		volumeBar.setProgress(volumeBar.getMax()- (volumeBar.getMax() - volume));    		
+    	} else {
+    		volumeBar.setProgress(volumeBar.getMax());
+    	}
+    	if(tactileFeed) {
+//    		analyzer.stop();
+//    		uiController.stopFeedBack();
+    		vibrator.vibrate(200);
+    	}
+    }
+    
+    /**
+     * Update target note.
+     *
+     * @param note the note
+     */
+    public void updateTargetNote(MusicNote note) {
+    	targetFreq.setText(Double.toString(note.getFrequency()));
+    	noteSelector.setSelection(note.getIndex());
+//    	targetNote.setText(note.getNote());
+    }
+    
+    /**
+     * Display feed back.
+     *
+     * @param show the show
+     */
+    public void displayFeedBack(boolean show) {
+    	if(show) {
+    		userFreq.setVisibility(View.VISIBLE);
+    		userNote.setVisibility(View.VISIBLE);
+    		userNoteImg.setVisibility(View.VISIBLE);
+    	} else {
+    		userFreq.setVisibility(View.INVISIBLE);
+    		userNote.setVisibility(View.INVISIBLE);
+    		userNoteImg.setVisibility(View.INVISIBLE);
+    		volumeBar.setProgress(0);
+    	}
+    }
+    
+    /* (non-Javadoc)
+     * @see android.app.Activity#onDestroy()
+     */
+    @Override
+	protected void onDestroy() {
+		super.onDestroy();
+
+	}
+
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onPause()
+	 */
+	@Override
+	protected void onPause() {
+		super.onPause();
+	}
+
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onRestart()
+	 */
+	@Override
+	protected void onRestart() {
+		super.onRestart();
+	}
+
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onResume()
+	 */
+	@Override
+	protected void onResume() {
+		super.onResume();
+        if(analyzer!=null) {
+        	analyzer.ensureStarted();
+        }
+	}
+
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onStart()
+	 */
+	@Override
+	protected void onStart() {
+		super.onStart();
+        if(analyzer!=null) {
+        	analyzer.start();
+        }
+        if(uiController != null) {
+        	uiController.startTactileFeedBack();
+        }
+	}
+
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onStop()
+	 */
+	@Override
+	protected void onStop() {
+		super.onStop();
+        if(analyzer!=null) {
+        	analyzer.stop();        	
+        }
+        if(uiController != null) {
+        	uiController.stopTactileFeedBack();
+        }
+	}
+	
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onBackPressed()
+	 */
+	@Override
+	public void onBackPressed() {
+		// TODO Auto-generated method stub
+		super.onBackPressed();
+		startActivity(new Intent(getApplicationContext(), MenuActivity.class));
+		finish();
+	}
+}
